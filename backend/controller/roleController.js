@@ -1,3 +1,4 @@
+import MySqlPool from '../config/db.js';
 import Role from '../models/roleModel.js';
 import genrateSlug from '../service/genrateSlug.js';
 
@@ -13,11 +14,10 @@ async function createRole(req, res) {
         if (roleTypequery == 'Admin') {
 
             slug = genrateSlug(roleType); // ganrate slug
-            console.log("uniques slug in createRole", slug);
-            
 
-            const role = await Role.create({ roleType, slug, permissions });
-            if (role) {
+            const result = await Role.create(roleType, slug, permissions);
+            
+            if (result.affectedRows > 0) {
                 return res.status(201).json({ message: "Role created successfully" });
             }
         }
@@ -34,16 +34,18 @@ async function deleteRole(req, res) {
     try {
         const roleTypequery = req.query.roleTypequery;
         const slug = req.params.slug;
-        console.log("slug", slug, "Query: ",roleTypequery);
-        
+        // console.log("slug", slug, "Query: ", roleTypequery);
 
         if (!slug) return res.status(400).json({ msg: "Please provide all fields" });
 
         if (roleTypequery == 'Admin') {
-          const response = await Role.findOneAndDelete({ slug });
-          res.status(200).json({ message: "Role deleted successfully!" });
+            const [result] = await MySqlPool.query(`DELETE FROM roles WHERE slug = ?`, [slug])
 
-          console.log("res", response);
+            if (result.affectedRows > 0) {
+                return res.status(200).json({ message: "Role deleted successfully!" });
+            } else {
+                return res.status(404).json({ message: "Role not found!" });
+            }
         }
         else {
             res.status(400).json({ message: "Unauthorized access" });
@@ -56,13 +58,19 @@ async function deleteRole(req, res) {
 
 async function updateRole(req, res) {
     try {
-      const params = req.params;
-      console.log("params in update role", params);
-      
-      const {roleType, permissions} = req.body;
-      if (!roleType) return res.status(400).json({ msg: "Please provide all fields" });
-      await Role.findOneAndUpdate({slug: params.slug}, {roleType, permissions});
-    } 
+        const params = req.params;
+        console.log("params in update role", params);
+
+        const { roleType, permissions } = req.body;
+        if (!roleType) return res.status(400).json({ msg: "Please provide all fields" });
+       
+       const result = await Role.update(roleType, permissions, params);
+        if (result.affectedRows > 0) {
+            return res.status(200).json({ message: "Role updated successfully!" });
+        } else {
+            return res.status(404).json({ message: "Role not found!" });
+        }
+    }
     catch (error) {
         res.status(500).json({ message: "Internal server error", error });
     }

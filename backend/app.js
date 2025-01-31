@@ -2,7 +2,7 @@ import express from 'express';
 import path from 'path';
 import cookieParser from 'cookie-parser';
 import dotenv from 'dotenv';
-import { connectDB } from './config/db.js';
+import MySqlPool from './config/db.js';
 import { authRouter } from './routes/users.js';
 import cors from 'cors';
 import { roleRouter } from './routes/role.js';
@@ -30,7 +30,11 @@ app.use('/*', (req, res) => {
 });
 
 const PORT = process.env.PORT;
-app.listen(PORT, () => {
-  console.log(`Server started at: http://localhost:${PORT}`)
-  connectDB()
-});
+
+MySqlPool.query('SELECT 1').then(()=>{
+  console.log("MySql Connected");
+  app.listen(PORT,  ()=> {
+      console.log(`server started at http://localhost:${PORT}`)
+  })
+})
+.catch((err)=> console.log("error on DB connection", err))

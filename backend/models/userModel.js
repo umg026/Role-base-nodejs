@@ -1,31 +1,42 @@
-import mongoose from "mongoose";
+import MySqlPool from '../config/db.js';
 
-const UserSchema = new mongoose.Schema({
-    fullname: {
-        type: String,
-        required: true,
-    },
-    email: {
-        type: String,
-        required: true,
-        unique: true
-    },
-    role: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Role',
-        required: true
-    },
-    password: {
-        type: String,
-        required: true,
-    },
-    profilePic: {
-        type: String,
-        required: false,
-        default: 'https://static.vecteezy.com/system/resources/thumbnails/002/318/271/small_2x/user-profile-icon-free-vector.jpg'
+async function findUserByEmail(email) {
+    try {
+        const [rows] = await MySqlPool.query(`SELECT * FROM users WHERE email = ?`, [email]);
+        return rows.length > 0 ? rows[0] : null;
+    } 
+    catch (error) {
+        console.error("Error finding user by email:", error);
+        throw error;
     }
-}, { timestamps: true })
+}
 
-const User = mongoose.model("User", UserSchema);
+async function createUser(fullname, email, hashedPassword, roleId, profilePic) {
+    try {
+        const [result] = await MySqlPool.query(
+            `INSERT INTO users (fullname, email, password, role_id, profilePic) VALUES (?, ?, ?, ?, ?)`,
+            [fullname, email, hashedPassword, roleId, profilePic]
+        );
+        return result;
+    } 
+    catch (error) {
+        console.error("Error creating user:", error);
+        throw error;
+    }
+}
 
-export default User;
+async function updateUser(userId, fullname, email, profilePic) {
+    try {
+        const [result] = await MySqlPool.query(
+            `UPDATE users SET fullname = ?, email = ?, profilePic = ? WHERE id = ?`,
+            [fullname, email, profilePic, userId]
+        );
+        return result;
+    } 
+    catch (error) {
+        console.error("Error updating user:", error);
+        throw error;
+    }
+}
+
+export { findUserByEmail, createUser, updateUser };
